@@ -5,7 +5,8 @@
     
     <ul> 
         {% for cat in categories %}    
-            <li>{{cat.category}}</li>
+            
+            <li><a href="{% url 'auctions:by_category' cat.category %}">{{cat.category}}</a></li>
         {% empty %}
             No Listings.
         {% endfor %}

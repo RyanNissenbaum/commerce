@@ -3,12 +3,15 @@ from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
-
-from .models import User
+from django import forms
+from .models import User, Listing
 
 
 def index(request):
-    return render(request, "auctions/index.html")
+    listings = Listing.objects.all()
+    return render(request, "auctions/index.html", {
+        "listings": listings
+    })
 
 
 def login_view(request):
@@ -22,7 +25,7 @@ def login_view(request):
         # Check if authentication successful
         if user is not None:
             login(request, user)
-            return HttpResponseRedirect(reverse("index"))
+            return HttpResponseRedirect(reverse("auctions:index"))
         else:
             return render(request, "auctions/login.html", {
                 "message": "Invalid username and/or password."
@@ -33,7 +36,7 @@ def login_view(request):
 
 def logout_view(request):
     logout(request)
-    return HttpResponseRedirect(reverse("index"))
+    return HttpResponseRedirect(reverse("auctions:index"))
 
 
 def register(request):
@@ -60,6 +63,47 @@ def register(request):
                 "message": "Username already taken."
             })
         login(request, user)
-        return HttpResponseRedirect(reverse("index"))
+        return HttpResponseRedirect(reverse("auctions:index"))
     else:
         return render(request, "auctions/register.html")
+
+def categories(request):
+    categories = Listing.objects.values("category").distinct()
+    return render(request, "auctions/categories.html", {
+        "categories": categories
+    })
+
+def by_category(request, category):
+
+    listings = Listing.objects.filter(category=category)
+    
+    return render(request, "auctions/index.html", {
+        "listings": listings
+    })
+
+class NewListingForm(forms.Form):
+    category = forms.CharField(label="Category")
+    title = forms.CharField(label="Title")
+    description = forms.CharField(label="Description")
+    starting_bid = forms.DecimalField(label="Starting Bid")
+    image_url = forms.URLField(label="Image URL", required=False)
+
+
+def add(request):
+    if request.method == "POST":
+        form = NewListingForm(request.POST)
+        if form.is_valid():
+            l = Listing(category=form.cleaned_data["category"], title=form.cleaned_data["title"], description=form.cleaned_data["description"], starting_bid=form.cleaned_data["starting_bid"])
+            l.save()
+
+
+    return render(request, "auctions/add.html", {
+        "form": NewListingForm()
+    })
+
+
+def listing(request, listing_id):
+    listing = Listing.objects.get(pk=listing_id)
+    return render(request, "auctions/listing.html", {
+        "listing": listing
+    })
